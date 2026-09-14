@@ -50,7 +50,7 @@ export const TEXT: I18N = {
     full: 'সম্পূর্ণ',
     grid: 'গ্রিড',
     viewOptions: 'ভিউ অপশন',
-    about: 'সম্পর্কে',
+    library: 'লাইব্রেরি',
     admin: 'অ্যাডমিন',
     search: 'সার্চ',
     prev: 'পূর্ববর্তী',
@@ -58,7 +58,7 @@ export const TEXT: I18N = {
     next: 'পরবর্তী',
     nextShort: 'পরবর্তী',
   },
-  about: {
+  library: {
     titleDefault: 'এই সাইট সম্পর্কে',
     updated: '{{distance}} আগে আপডেট হয়েছে',
     photoCount: 'ছবির সংখ্যা',
@@ -70,9 +70,6 @@ export const TEXT: I18N = {
     recentAlbum: 'সাম্প্রতিক অ্যালবাম',
     popularTag: 'জনপ্রিয় ট্যাগ',
     popularPlace: 'জনপ্রিয় স্থান',
-  },
-  footer: {
-    madeWith: 'তৈরি হয়েছে',
   },
   sort: {
     sort: 'সাজান',
@@ -218,5 +215,6 @@ export const TEXT: I18N = {
     copyPhrase: '{{label}} কপি হয়েছে',
     paginate: '{{index}} / {{count}}',
     paginateAction: '{{action}} - {{index}} / {{count}}',
+    madeWith: 'তৈরি হয়েছে',
   },
 };

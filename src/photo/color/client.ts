@@ -26,8 +26,15 @@ export const convertJsonStringToOklch = (jsonString = '') => {
   }
 };
 
-export const convertOklchToCss = (oklch: Oklch) =>
-  `oklch(${oklch.l} ${oklch.c} ${oklch.h})`;
+export const convertOklchToCss = (oklch: Oklch, alpha?: number) =>
+  alpha === undefined
+    ? `oklch(${oklch.l} ${oklch.c} ${oklch.h})`
+    : `oklch(${oklch.l} ${oklch.c} ${oklch.h} / ${alpha})`;
+
+export const getDominantColorFromPhoto = (
+  photo?: { colorData?: PhotoColorData },
+): Oklch | undefined =>
+  photo?.colorData?.ai ?? photo?.colorData?.colors[0];
 
 export const logOklch = (oklch: Oklch) =>
   `L:${oklch.l.toFixed(2)} C:${oklch.c.toFixed(2)} H:${oklch.h.toFixed(2)}`;

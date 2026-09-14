@@ -9,34 +9,74 @@ import SelectMenu from '@/components/SelectMenu';
 import StatusIcon from '@/components/StatusIcon';
 import clsx from 'clsx/lite';
 import { useState } from 'react';
+import { TINT_FOLDERS } from '@/app/config';
 import { Photo } from '@/photo';
 import FieldsetPhotoChooser from '@/photo/form/FieldsetPhotoChooser';
+import PhotoFolder from '@/components/folder/PhotoFolder';
+import type { PhotoFolderTint } from '@/components/folder';
 
 export default function AdminComponentPageClient({
   photo,
   photos,
   photosCount,
   photosFavs,
+  photoFolders,
 }: {
   photo: Photo
   photos: Photo[]
   photosCount: number
   photosFavs: Photo[]
+  photoFolders: {
+    photos: Photo[]
+    caption: string
+    maxPhotos: number
+    count?: number
+  }[]
 }) {
   const [valuePhoto, setValuePhoto] = useState(photo?.id ?? '');
 
   const [value, setValue] = useState('visible');
 
+  const [tint, setTint] = useState<PhotoFolderTint>(
+    TINT_FOLDERS ? 'on' : 'off',
+  );
+
   return (
     <AppGrid
       contentMain={<div className="flex flex-col gap-4">
+        <FieldsetWithStatus
+          label="Color tint"
+          type="checkbox"
+          value={tint !== 'off' ? 'true' : 'false'}
+          onChange={value => setTint(value === 'true' ? 'on' : 'off')}
+        />
+        <div className={clsx(
+          'grid gap-3',
+          'grid-cols-2 xs:grid-cols-3 md:grid-cols-4 lg:grid-cols-5',
+        )}>
+          {photoFolders.map((folder, index) =>
+            <div
+              key={`${folder.caption}-${index}`}
+              className="w-full h-full flex items-center justify-center"
+            >
+              <PhotoFolder
+                photos={folder.photos}
+                caption={folder.caption}
+                tint={tint}
+                maxPhotos={folder.maxPhotos}
+                count={folder.count}
+              />
+            </div>)}
+        </div>
         <div className={clsx(
           'flex gap-1',
-          '*:inline-flex *:bg-medium *:rounded-[3px]',
+          // '*:inline-flex *:bg-medium *:rounded-[3px]',
         )}>
           <StatusIcon type="checked" />
           <StatusIcon type="missing" />
           <StatusIcon type="warning" />
+          <StatusIcon type="optional" />
+          <StatusIcon type="optional" loading />
           <StatusIcon type="optional" />
         </div>
         <div className="z-14">
