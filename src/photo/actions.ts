@@ -78,7 +78,12 @@ import { after } from 'next/server';
 import {
   getColorFieldsForImageUrl,
   getColorFieldsForPhotoDbInsert,
+  getColorFromAI,
 } from '@/photo/color/server';
+import {
+  getKeyColorFromColorData,
+  getKeyColorFromPhoto,
+} from '@/photo/color/client';
 import { shouldBackfillPhotoStorage } from './update/server';
 import { getAlbumTitlesFromFormData } from '@/album/form';
 import {
@@ -457,19 +462,33 @@ export const getRecipeDataForTitleAction = async (recipeTitle: string) =>
     await getRecipeDataForTitle(recipeTitle),
   );
 
-export const storeColorDataForPhotoAction = async (photoId: string) =>
+export const getAiColorAction = async (url: string) =>
+  runAuthenticatedAdminServerAction(async () =>
+    await getColorFromAI(url),
+  );
+
+export const storeColorDataForPhotoAction = async (
+  photoId: string,
+  { force }: { force?: boolean } = {},
+) =>
   runAuthenticatedAdminServerAction(async () => {
     const photo = await getPhoto(photoId, true);
     if (photo) {
+      const oldColor = getKeyColorFromPhoto(photo);
       const colorFields = await getColorFieldsForImageUrl(
         photo.url,
-        photo.colorData,
+        force ? undefined : photo.colorData,
       );
       if (colorFields) {
         await updatePhoto(convertPhotoToPhotoDbInsert({
           ...photo,
           ...colorFields,
         }));
+        revalidatePhoto(photo.id);
+        return {
+          oldColor,
+          newColor: getKeyColorFromColorData(colorFields.colorData),
+        };
       }
       revalidatePhoto(photo.id);
     }
@@ -592,11 +611,11 @@ export const getExifDataAction = async (
 // - strip GPS data if necessary
 // - update blur data (or destroy if blur is disabled)
 // - generate AI text data, if enabled, and auto-generated fields are empty
+// - recalculate color data/sort if AI or color sort is enabled
 export const syncPhotoAction = async (
   photoId: string, {
     isBatch,
     syncMode = 'auto',
-    updateMode,
   }: {
     isBatch?: boolean,
     syncMode?: 'auto' | 'only-missing' | 'overwrite',
@@ -616,12 +635,7 @@ export const syncPhotoAction = async (
         includeInitialPhotoFields: false,
         generateBlurData: BLUR_ENABLED,
         generateResizedImage: AI_CONTENT_GENERATION_ENABLED,
-        // In update mode, only update color fields if necessary
-        updateColorFields: !(
-          updateMode &&
-          photo.colorData !== undefined &&
-          photo.colorSort !== undefined
-        ),
+        updateColorFields: AI_CONTENT_GENERATION_ENABLED,
       });
 
       const uniqueTags = await getUniqueTags();
