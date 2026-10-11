@@ -51,6 +51,7 @@ import { useTheme } from 'next-themes';
 import { BiDesktop, BiLockAlt, BiMoon, BiSun } from 'react-icons/bi';
 import { IoClose, IoInvertModeSharp } from 'react-icons/io5';
 import { useAppState } from '@/app/AppState';
+import { useUploadState } from '@/admin/upload/UploadState';
 import { RiToolsFill } from 'react-icons/ri';
 import { signOutAction } from '@/auth/actions';
 import {
@@ -131,13 +132,13 @@ type CommandKItem = {
   annotationAria?: string
   path?: string
   action?: () => void | Promise<void | boolean>
-}
+};
 
 type CommandKSection = {
   heading: string
   accessory?: ReactNode
   items: CommandKItem[]
-}
+};
 
 const renderCheck = (isChecked?: boolean) =>
   isChecked
@@ -179,7 +180,6 @@ export default function CommandKClient({
     clearAuthStateAndRedirectIfNecessary,
     isCommandKOpen: isOpen,
     nextCommandKQuery,
-    startUpload,
     invalidateSwr,
     photosCountTotal,
     photosCountHidden = 0,
@@ -207,6 +207,8 @@ export default function CommandKClient({
     setShouldDebugInsights,
     setShouldDebugRecipeOverlays,
   } = useAppState();
+
+  const { startUpload } = useUploadState();
 
   const {
     isSelectingPhotos,
@@ -316,7 +318,7 @@ export default function CommandKClient({
     return () => document.removeEventListener(LISTENER_KEYDOWN, down);
   }, [setIsOpen]);
 
-  const queriedSections = useMemo<CommandKSection[]>(() => {
+  const sectionQuery = useMemo<CommandKSection[]>(() => {
     if (isOpenRef.current && photos.length > 0) {
       return [{
         heading: 'Photos',
@@ -387,7 +389,7 @@ export default function CommandKClient({
       : tagsIncludingPrivate;
   }, [_tags, photosCountHidden, queryFormatted]);
 
-  const categorySections: CommandKSection[] = useMemo(() =>
+  const sectionCategories: CommandKSection[] = useMemo(() =>
     CATEGORY_VISIBILITY
       .map(category => {
         const heading = getCategoryTitle(category, appText);
@@ -436,12 +438,14 @@ export default function CommandKClient({
           case 'albums': return {
             heading,
             accessory: <IconAlbum size={14} />,
-            items: albums.map(({ album, count }) => ({
-              label: album.title,
-              annotation: formatCount(count),
-              annotationAria: formatCountDescriptive(count),
-              path: pathForAlbum(album),
-            })),
+            items: albums
+              .filter(({ count }) => count > 0)
+              .map(({ album, count }) => ({
+                label: album.title,
+                annotation: formatCount(count),
+                annotationAria: formatCountDescriptive(count),
+                path: pathForAlbum(album),
+              })),
           };
           case 'tags': return {
             heading,
@@ -519,7 +523,7 @@ export default function CommandKClient({
     focalLengths,
   ]);
 
-  const clientSections: CommandKSection[] = [{
+  const sectionTheme: CommandKSection[] = [{
     heading: appText.theme.theme,
     accessory: <IoInvertModeSharp
       size={14}
@@ -540,8 +544,10 @@ export default function CommandKClient({
     }],
   }];
 
+  const sectionDebugTools = [] as CommandKSection[];
+
   if (isUserSignedIn && areAdminDebugToolsEnabled) {
-    clientSections.push({
+    sectionDebugTools.push({
       heading: 'Debug Tools',
       accessory: <RiToolsFill size={16} className="translate-x-[-1px]" />,
       items: [
@@ -618,7 +624,7 @@ export default function CommandKClient({
     });
   }
 
-  const sortSection: CommandKSection = {
+  const sectionSort: CommandKSection = {
     heading: appText.sort.sort,
     accessory: <IconSort size={14} className="translate-x-[0.5px]" />,
     items: doesPathOfferSort && !isInEmptyState
@@ -662,7 +668,7 @@ export default function CommandKClient({
     items: pageItems,
   };
 
-  const adminSection: CommandKSection = {
+  const sectionAdmin: CommandKSection = {
     heading: appText.nav.admin,
     accessory: <FaRegUserCircle
       size={13}
@@ -672,45 +678,45 @@ export default function CommandKClient({
   };
 
   if (isUserSignedIn) {
-    adminSection.items.push({
+    sectionAdmin.items.push({
       label: appText.admin.uploadPhotos,
       annotation: <IconLock narrow />,
       action: startUpload,
     });
     if (uploadsCount) {
-      adminSection.items.push({
+      sectionAdmin.items.push({
         label: `${appText.admin.uploadPlural} (${uploadsCount})`,
         annotation: <IconLock narrow />,
         path: PATH_ADMIN_UPLOADS,
       });
     }
-    adminSection.items.push({
+    sectionAdmin.items.push({
       label: `${appText.admin.managePhotos} (${photosCountTotal})`,
       annotation: <IconLock narrow />,
       path: PATH_ADMIN_PHOTOS,
     });
     if (albumsCount) {
-      adminSection.items.push({
+      sectionAdmin.items.push({
         label: `${appText.admin.manageAlbums} (${albumsCount})`,
         annotation: <IconLock narrow />,
         path: PATH_ADMIN_ALBUMS,
       });
     }
     if (tagsCount) {
-      adminSection.items.push({
+      sectionAdmin.items.push({
         label: `${appText.admin.manageTags} (${tagsCount})`,
         annotation: <IconLock narrow />,
         path: PATH_ADMIN_TAGS,
       });
     }
     if (recipesCount) {
-      adminSection.items.push({
+      sectionAdmin.items.push({
         label: `${appText.admin.manageRecipes} (${recipesCount})`,
         annotation: <IconLock narrow />,
         path: PATH_ADMIN_RECIPES,
       });
     }
-    adminSection.items.push({
+    sectionAdmin.items.push({
       label: isSelectingPhotos
         ? appText.admin.selectPhotosExit
         : appText.admin.selectPhotos,
@@ -752,7 +758,6 @@ export default function CommandKClient({
         {insightsIndicatorStatus &&
           <InsightsIndicatorDot />}
       </span>,
-      keywords: ['app insights'],
       annotation: <IconLock narrow />,
       path: PATH_ADMIN_INSIGHTS,
     }, {
@@ -761,7 +766,7 @@ export default function CommandKClient({
       path: PATH_ADMIN_CONFIGURATION,
     });
     if (areAdminDebugToolsEnabled) {
-      adminSection.items.push({
+      sectionAdmin.items.push({
         label: 'Baseline Overview',
         annotation: <BiLockAlt />,
         path: PATH_ADMIN_BASELINE,
@@ -772,20 +777,20 @@ export default function CommandKClient({
       });
     }
     if (isAdminAiModelDebugEnabled) {
-      adminSection.items.push({
+      sectionAdmin.items.push({
         label: 'AI Model Comparison',
         annotation: <BiLockAlt />,
         path: PATH_ADMIN_AI_MODELS,
       });
     }
-    adminSection.items.push({
+    sectionAdmin.items.push({
       label: appText.auth.signOut,
       action: () => signOutAction()
         .then(clearAuthStateAndRedirectIfNecessary)
         .then(() => setIsOpen?.(false)),
     });
   } else {
-    adminSection.items.push({
+    sectionAdmin.items.push({
       label: appText.auth.signIn,
       path: PATH_SIGN_IN,
     });
@@ -899,12 +904,13 @@ export default function CommandKClient({
                 ? appText.cmdk.searching
                 : appText.cmdk.noResults}
             </Command.Empty>
-            {queriedSections
-              .concat(categorySections)
-              .concat(sortSection)
+            {sectionQuery
+              .concat(sectionCategories)
+              .concat(sectionSort)
               .concat(sectionPages)
-              .concat(adminSection)
-              .concat(clientSections)
+              .concat(sectionTheme)
+              .concat(sectionAdmin)
+              .concat(sectionDebugTools)
               .filter(({ items }) => items.length > 0)
               .map(({ heading, accessory, items }) =>
                 <Command.Group
